@@ -43,6 +43,21 @@ export interface SpatialArc {
   tick: number;
 }
 
+export interface SpatialPoint {
+  id: string;
+  locationId: string;
+  label: string;
+  /** normalized 0..1 viewport coordinates */
+  x: number;
+  y: number;
+  /** agent risk at this location during this time period */
+  risk: number;
+  /** agent status at this location (infected/exposed/susceptible) */
+  status: AgentStatus;
+  /** time tick when agent was at this location */
+  tick: number;
+}
+
 export interface VoIRecommendation {
   id: string; // agent id recommended for PCR test
   riskScore: number; // 0–1
@@ -76,6 +91,7 @@ export interface SimulationData {
   environmentalAlerts: EnvironmentalAlert[];
   riskDistribution: RiskBucket[];
   spatialArcs: SpatialArc[];
+  spatialPoints?: SpatialPoint[];
   timeRange: { startDay: number; endDay: number };
 }
 

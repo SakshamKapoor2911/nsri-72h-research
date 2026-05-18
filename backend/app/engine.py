@@ -390,7 +390,7 @@ class SpatialExposureEngine:
                 "agents": buckets[i]
             })
             
-        # 6. Spatial Arcs (Simplified)
+        # 6. Spatial Arcs & Points
         lats = [l['coords'][0] for l in self.locations.values()]
         lons = [l['coords'][1] for l in self.locations.values()]
         min_lat, max_lat = min(lats), max(lats)
@@ -402,21 +402,19 @@ class SpatialExposureEngine:
             return x * 0.8 + 0.1, y * 0.8 + 0.1
 
         arcs = []
+        spatial_points = []
         try:
             p0_id = next(ind['individual_id'] for ind in self.trajectories if ind['is_patient_zero'])
             p0_data = next(ind for ind in self.trajectories if ind['individual_id'] == p0_id)
             
-            # Create arcs for p0's location changes across the full period
+            # Arcs
             last_loc = None
             for entry in p0_data['timeline']:
                 loc_id = entry['location_id']
                 if loc_id != last_loc:
                     if last_loc is not None:
-                        # Arc from last_loc to current loc
                         t_obj = pd.to_datetime(entry['timestamp'])
-                        # Calculate day index (1-based)
                         day_idx = (t_obj - self.timestamps[0]).days + 1
-                        # Fractional part based on time of day
                         day_progress = (t_obj.hour * 3600 + t_obj.minute * 60 + t_obj.second) / 86400.0
                         
                         from_loc = self.locations[last_loc]
@@ -433,6 +431,29 @@ class SpatialExposureEngine:
         except StopIteration:
             pass
 
+        # Spatial Points
+        for ind in self.trajectories:
+            agent_risk = next((s['mean_risk'] for s in summary if s['individual_id'] == ind['individual_id']), 0.0)
+            status = next((a['status'] for a in agents if a['id'] == ind['individual_id']), "susceptible")
+            
+            for entry in ind['timeline']:
+                t_obj = pd.to_datetime(entry['timestamp'])
+                day_idx = (t_obj - self.timestamps[0]).days + 1
+                day_progress = (t_obj.hour * 3600 + t_obj.minute * 60 + t_obj.second) / 86400.0
+                loc_id = entry['location_id']
+                nx, ny = normalize(*entry['coordinates'])
+                
+                spatial_points.append({
+                    "id": f"pt-{ind['individual_id']}-{day_idx}",
+                    "locationId": loc_id,
+                    "label": ind['name'],
+                    "x": nx,
+                    "y": ny,
+                    "risk": float(agent_risk),
+                    "status": status,
+                    "tick": float(day_idx + day_progress)
+                })
+
         start_day = 1
         end_day = (self.timestamps[-1] - self.timestamps[0]).days + 1
 
@@ -444,5 +465,6 @@ class SpatialExposureEngine:
             "environmentalAlerts": alerts,
             "riskDistribution": risk_dist,
             "spatialArcs": arcs,
+            "spatialPoints": spatial_points,
             "timeRange": {"startDay": start_day, "endDay": max(start_day, end_day)}
         }

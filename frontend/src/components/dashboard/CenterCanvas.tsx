@@ -36,7 +36,7 @@ export function CenterCanvas({ data, isLoading, onRun }: Props) {
             <>
               <TabsContent value="network" className="h-full"><NetworkTab agents={data.agents} links={data.links} /></TabsContent>
               <TabsContent value="spatio" className="h-full">
-                <SpatioTemporalTab startDay={data.timeRange.startDay} endDay={data.timeRange.endDay} arcs={data.spatialArcs} />
+                <SpatioTemporalTab startDay={data.timeRange.startDay} endDay={data.timeRange.endDay} arcs={data.spatialArcs} points={data.spatialPoints} />
               </TabsContent>
               <TabsContent value="global" className="h-full">
                 <GlobalDataView agents={data.agents} />

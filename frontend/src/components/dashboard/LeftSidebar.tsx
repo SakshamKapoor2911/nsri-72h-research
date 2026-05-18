@@ -1,5 +1,6 @@
-import { Microscope, Play, Loader2 } from "lucide-react";
+import { Microscope, Play, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 
 interface LeftSidebarProps {
   isLoading?: boolean;
@@ -21,10 +22,22 @@ export function LeftSidebar({ isLoading, onRun }: LeftSidebarProps) {
           Project Metadata
         </div>
         <div className="space-y-2 rounded-md border bg-background/40 p-3">
-          <MetaRow label="Version" value="v2.4.0-rc" />
-          <MetaRow label="Engine" value="Inference v4" />
+          <MetaRow label="Version" value="v1.0.4" />
+          <MetaRow label="Engine" value="NumPy/Ghost" />
           <MetaRow label="Region" value="Maryland, USA" />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Documentation
+        </div>
+        <Link to="/methodology">
+          <Button variant="outline" className="w-full h-8 justify-start font-mono text-[10px] uppercase tracking-wider border-primary/20 bg-primary/5 hover:bg-primary/10">
+            <BookOpen className="mr-2 h-3.5 w-3.5 text-primary" />
+            Research Methodology
+          </Button>
+        </Link>
       </section>
 
       <section className="space-y-3">
