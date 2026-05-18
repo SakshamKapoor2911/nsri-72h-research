@@ -57,7 +57,7 @@ export function GlobalDataView({ agents }: Props) {
                     [{agent.confidenceInterval.lower.toFixed(2)}, {agent.confidenceInterval.upper.toFixed(2)}]
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate font-mono text-[10px] text-muted-foreground">
-                    {agent.visitedLocations.join(", ")}
+                    {agent.visitedLocations?.join(", ")}
                   </TableCell>
                 </TableRow>
               ))}

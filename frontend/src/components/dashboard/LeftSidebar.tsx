@@ -1,6 +1,12 @@
-import { Microscope } from "lucide-react";
+import { Microscope, Play, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export function LeftSidebar() {
+interface LeftSidebarProps {
+  isLoading?: boolean;
+  onRun?: () => void;
+}
+
+export function LeftSidebar({ isLoading, onRun }: LeftSidebarProps) {
   return (
     <aside className="flex h-full w-64 flex-col gap-6 border-r bg-[var(--color-panel)]/60 p-5">
       <div>
@@ -19,6 +25,24 @@ export function LeftSidebar() {
           <MetaRow label="Engine" value="Inference v4" />
           <MetaRow label="Region" value="Maryland, USA" />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Execution
+        </div>
+        <Button 
+          className="w-full h-9 font-mono text-[11px] uppercase tracking-wider" 
+          disabled={isLoading}
+          onClick={onRun}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-3 w-3" />
+          )}
+          Run Monte Carlo
+        </Button>
       </section>
 
       <section className="space-y-3">

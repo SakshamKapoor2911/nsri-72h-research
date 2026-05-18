@@ -16,6 +16,13 @@ export interface AgentNode {
   confidenceInterval: ConfidenceInterval; // 95% CI on meanRisk
   status: AgentStatus;
   visitedLocations?: string[]; // location ids the agent has been seen at
+  primaryLocation?: string;
+}
+
+export interface NetworkLink {
+  source: string;
+  target: string;
+  weight: number;
 }
 
 export interface GeoPoint {
@@ -64,6 +71,7 @@ export interface RiskBucket {
 export interface SimulationData {
   kpis: SimulationKpis;
   agents: AgentNode[];
+  links: NetworkLink[];
   recommendations: VoIRecommendation[];
   environmentalAlerts: EnvironmentalAlert[];
   riskDistribution: RiskBucket[];

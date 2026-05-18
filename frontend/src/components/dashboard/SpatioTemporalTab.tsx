@@ -1,6 +1,8 @@
-import { Globe2 } from "lucide-react";
+import { Globe2, Play, Pause, RotateCcw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useTimeStore } from "@/store/useTimeStore";
+import { useEffect, useRef, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import type { SpatialArc } from "@/types/api";
 
 interface Props {
@@ -31,8 +33,38 @@ function arcColor(risk: number): string {
 export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
   const tick = useTimeStore((s) => s.currentTimeTick);
   const setTick = useTimeStore((s) => s.setCurrentTimeTick);
+  const isPlaying = useTimeStore((s) => s.isPlaying);
+  const setIsPlaying = useTimeStore((s) => s.setIsPlaying);
+  const timerRef = useRef<number | null>(null);
 
-  const visible = arcs.filter((a) => a.tick <= tick);
+  useEffect(() => {
+    if (isPlaying) {
+      const start = performance.now();
+      const initialTick = tick;
+      
+      const frame = (now: number) => {
+        const elapsed = now - start;
+        // Advance by 1 day every 5 seconds (0.2 days per second)
+        const nextTick = initialTick + (elapsed / 5000);
+        
+        if (nextTick >= endDay) {
+          setTick(endDay);
+          setIsPlaying(false);
+        } else {
+          setTick(nextTick);
+          timerRef.current = requestAnimationFrame(frame);
+        }
+      };
+      timerRef.current = requestAnimationFrame(frame);
+    } else if (timerRef.current) {
+      cancelAnimationFrame(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) cancelAnimationFrame(timerRef.current);
+    };
+  }, [isPlaying, endDay, setIsPlaying, setTick]);
+
+  const activeVectorsCount = useMemo(() => arcs.filter(a => a.tick <= tick).length, [arcs, tick]);
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -61,7 +93,7 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
         {/* arcs canvas */}
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 60" preserveAspectRatio="none">
           {/* Historical Paths (Dotted Lines) */}
-          {arcs.filter(a => a.tick < tick).map((a) => {
+          {arcs.filter(a => a.tick < Math.floor(tick)).map((a) => {
              const x1 = a.from.x * 100;
              const y1 = a.from.y * 60;
              const x2 = a.to.x * 100;
@@ -82,16 +114,24 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
              );
           })}
 
-          {visible.map((a) => {
+          {arcs.filter(a => a.tick <= Math.ceil(tick)).map((a) => {
             const x1 = a.from.x * 100;
             const y1 = a.from.y * 60;
             const x2 = a.to.x * 100;
             const y2 = a.to.y * 60;
             const mx = (x1 + x2) / 2;
-            // Lift arc apex by distance to fake 3D height
             const dist = Math.hypot(x2 - x1, y2 - y1);
             const my = Math.min(y1, y2) - dist * 0.55;
             const color = arcColor(a.riskDensity);
+            
+            // Progressive growth logic:
+            // If tick is 1.5 and a.tick is 1, it's 50% through its "appearing" day
+            const dayProgress = Math.max(0, Math.min(1, tick - a.tick + 1));
+            
+            // Faux path length for dash offset
+            // Q curve length is approx dist * 1.2
+            const pathLen = dist * 12; // multiplied for dash space
+
             return (
               <g key={a.id}>
                 <path
@@ -100,18 +140,22 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
                   stroke={color}
                   strokeWidth={0.35 + a.riskDensity * 0.5}
                   strokeLinecap="round"
-                  opacity={0.85}
+                  strokeDasharray={pathLen}
+                  strokeDashoffset={pathLen * (1 - dayProgress)}
+                  opacity={dayProgress * 0.85}
                   style={{ filter: `drop-shadow(0 0 1.2px ${color})` }}
                 />
-                <circle cx={x2} cy={y2} r={0.7 + a.riskDensity * 0.9} fill={color} opacity="0.95" />
+                {dayProgress > 0.95 && (
+                  <circle cx={x2} cy={y2} r={0.7 + a.riskDensity * 0.9} fill={color} opacity={0.9} />
+                )}
               </g>
             );
           })}
           {/* origin pulse */}
-          {visible[0] && (
+          {arcs.length > 0 && (
             <g>
-              <circle cx={visible[0].from.x * 100} cy={visible[0].from.y * 60} r="1.6" fill="rgb(225,29,72)" />
-              <circle cx={visible[0].from.x * 100} cy={visible[0].from.y * 60} r="3" fill="none" stroke="rgb(225,29,72)" strokeWidth="0.2" opacity="0.5">
+              <circle cx={arcs[0].from.x * 100} cy={arcs[0].from.y * 60} r="1.6" fill="rgb(225,29,72)" />
+              <circle cx={arcs[0].from.x * 100} cy={arcs[0].from.y * 60} r="3" fill="none" stroke="rgb(225,29,72)" strokeWidth="0.2" opacity="0.5">
                 <animate attributeName="r" from="1.6" to="5" dur="2.4s" repeatCount="indefinite" />
                 <animate attributeName="opacity" from="0.6" to="0" dur="2.4s" repeatCount="indefinite" />
               </circle>
@@ -123,7 +167,7 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
           <Globe2 className="h-3 w-3 text-primary" /> deck.gl ArcLayer · 3D Geo Viewport
         </div>
         <div className="pointer-events-none absolute right-3 top-3 rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] tabular-nums text-primary backdrop-blur">
-          {visible.length} active vectors · day {tick}
+          {activeVectorsCount} active vectors · day {tick.toFixed(2)}
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
           <ArcLegend />
@@ -132,20 +176,46 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
       </div>
 
       <div className="rounded-md border bg-[var(--color-panel)]/60 px-4 py-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Time Scrub
-          </span>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Continuous Time Scrub
+            </span>
+            <div className="flex items-center gap-1 rounded border bg-background/40 p-1">
+               <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5 hover:bg-primary/20 hover:text-primary"
+                onClick={() => setIsPlaying(!isPlaying)}
+               >
+                 {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 ml-0.5" />}
+               </Button>
+               <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5 hover:bg-primary/20 hover:text-primary"
+                onClick={() => {
+                  setIsPlaying(false);
+                  setTick(startDay);
+                }}
+               >
+                 <RotateCcw className="h-3 w-3" />
+               </Button>
+            </div>
+          </div>
           <span className="font-mono text-xs tabular-nums text-primary">
-            Day {tick} / {endDay}
+            Day {tick.toFixed(2)} / {endDay}
           </span>
         </div>
         <Slider
           value={[tick]}
-          onValueChange={(v) => setTick(v[0])}
+          onValueChange={(v) => {
+            setIsPlaying(false);
+            setTick(v[0]);
+          }}
           min={startDay}
           max={endDay}
-          step={1}
+          step={0.01}
         />
         <div className="mt-2 flex justify-between font-mono text-[10px] text-muted-foreground">
           <span>Day {startDay}</span>

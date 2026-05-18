@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { NetworkTab } from "./NetworkTab";
 import { SpatioTemporalTab } from "./SpatioTemporalTab";
 import { RiskAnalyticsTab } from "./RiskAnalyticsTab";
@@ -27,11 +28,13 @@ export function CenterCanvas({ data, isLoading, onRun }: Props) {
         </TabsList>
 
         <div className="mt-3 flex-1 overflow-hidden">
-          {isLoading || !data ? (
+          {isLoading ? (
             <CanvasSkeleton />
+          ) : !data ? (
+            <EmptyState onRun={onRun} />
           ) : (
             <>
-              <TabsContent value="network" className="h-full"><NetworkTab agents={data.agents} /></TabsContent>
+              <TabsContent value="network" className="h-full"><NetworkTab agents={data.agents} links={data.links} /></TabsContent>
               <TabsContent value="spatio" className="h-full">
                 <SpatioTemporalTab startDay={data.timeRange.startDay} endDay={data.timeRange.endDay} arcs={data.spatialArcs} />
               </TabsContent>
@@ -66,6 +69,25 @@ function CanvasSkeleton() {
         </div>
       </div>
       <Skeleton className="h-14 w-full" />
+    </div>
+  );
+}
+
+function EmptyState({ onRun }: { onRun: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-6 rounded-md border border-dashed bg-[var(--color-panel)]/20 p-12 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Play className="h-8 w-8 ml-1" />
+      </div>
+      <div className="max-w-md space-y-2">
+        <h3 className="font-mono text-lg font-semibold uppercase tracking-wider">Ready for Inference</h3>
+        <p className="text-sm text-muted-foreground">
+          The simulation engine is initialized and ready. Click the button below or use the sidebar to execute the Monte Carlo sampler and visualize the transmission graph.
+        </p>
+      </div>
+      <Button onClick={onRun} size="lg" className="px-8 font-mono uppercase tracking-widest">
+        Initialize Simulation
+      </Button>
     </div>
   );
 }

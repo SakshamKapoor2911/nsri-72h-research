@@ -121,6 +121,7 @@ const environmentalAlerts: EnvironmentalAlert[] = [
 export const mockSimulation: SimulationData = {
   kpis: { totalAgents: 500, activeCases: 1, highRiskExposures: 14, networkEntropy: 42.8 },
   agents: buildAgents(),
+  links: [],
   recommendations,
   environmentalAlerts,
   riskDistribution,
