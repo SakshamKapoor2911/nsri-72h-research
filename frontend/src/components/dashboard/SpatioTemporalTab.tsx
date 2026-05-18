@@ -73,10 +73,21 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
   const activeVectorsCount = useMemo(() => arcs.filter(a => a.tick <= tick).length, [arcs, tick]);
   
   // Filter spatial points within ±0.25 days of current tick for smooth animation
+  // Ensure we only show one point per agent at any given time tick
   const visiblePoints = useMemo(() => {
     if (!points) return [];
     const timeWindow = 0.25; // Show points within this range of current tick
-    return points.filter(p => Math.abs(p.tick - tick) <= timeWindow); 
+    const filtered = points.filter(p => Math.abs(p.tick - tick) <= timeWindow);
+    
+    // Deduplicate: Map by label (agent name/id) to keep only the closest in time
+    const map = new Map<string, SpatialPoint>();
+    for (const p of filtered) {
+        const existing = map.get(p.label);
+        if (!existing || Math.abs(p.tick - tick) < Math.abs(existing.tick - tick)) {
+            map.set(p.label, p);
+        }
+    }
+    return Array.from(map.values());
   }, [points, tick]);
 
   return (
