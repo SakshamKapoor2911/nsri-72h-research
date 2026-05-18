@@ -27,22 +27,29 @@ DATA_STORE = {
     "full_data": None
 }
 
+DATA_DIR = "backend"
+
 @app.on_event("startup")
 async def startup_event():
-    if os.path.exists("trajectories.json"):
-        with open("trajectories.json", "r") as f:
+    traj_path = os.path.join(DATA_DIR, "trajectories.json")
+    loc_path = os.path.join(DATA_DIR, "locations_context.json")
+    patho_path = os.path.join(DATA_DIR, "pathogen_config.json")
+    cache_path = os.path.join(DATA_DIR, "cached_simulation.json")
+
+    if os.path.exists(traj_path):
+        with open(traj_path, "r") as f:
             DATA_STORE["trajectories"] = json.load(f)
-    if os.path.exists("locations_context.json"):
-        with open("locations_context.json", "r") as f:
+    if os.path.exists(loc_path):
+        with open(loc_path, "r") as f:
             DATA_STORE["locations"] = json.load(f)
-    if os.path.exists("pathogen_config.json"):
-        with open("pathogen_config.json", "r") as f:
+    if os.path.exists(patho_path):
+        with open(patho_path, "r") as f:
             DATA_STORE["pathogen"] = json.load(f)
     
     # Load cached simulation if available
-    if os.path.exists("cached_simulation.json"):
+    if os.path.exists(cache_path):
         try:
-            with open("cached_simulation.json", "r") as f:
+            with open(cache_path, "r") as f:
                 DATA_STORE["full_data"] = json.load(f)
             print("Loaded cached simulation data.")
         except Exception as e:
@@ -63,7 +70,7 @@ async def run_simulation(background_tasks: BackgroundTasks):
         DATA_STORE["full_data"] = data
         # Cache the results
         try:
-            with open("cached_simulation.json", "w") as f:
+            with open(os.path.join(DATA_DIR, "cached_simulation.json"), "w") as f:
                 json.dump(data, f)
             print("Simulation results cached.")
         except Exception as e:
@@ -99,7 +106,7 @@ async def recompute_with_intel(agent_id: str, intel: str, background_tasks: Back
         data = engine.get_full_simulation_data(iterations=20)
         DATA_STORE["full_data"] = data
         try:
-            with open("cached_simulation.json", "w") as f:
+            with open(os.path.join(DATA_DIR, "cached_simulation.json"), "w") as f:
                 json.dump(data, f)
             print("Recomputed results cached.")
         except Exception as e:
