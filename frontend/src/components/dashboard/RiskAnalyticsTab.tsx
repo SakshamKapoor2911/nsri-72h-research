@@ -3,13 +3,12 @@ import { usePolicyStore } from "@/store/usePolicyStore";
 import type { RiskBucket } from "@/types/api";
 
 export function RiskAnalyticsTab({ data }: { data: RiskBucket[] }) {
-  // Predictive engine sharpens the posterior — false positives in mid/high buckets collapse to low.
-  const merged = data.map((b, i) => {
-    const factor = i < 2 ? 1.18 : i < 4 ? 0.55 : 0.22;
+  // Use actual backend data: baseline (heuristic) vs predictive (Monte Carlo)
+  const merged = data.map((b) => {
     return { 
       ...b, 
-      baseline: b.agents,
-      predictive: Math.max(1, Math.round(b.agents * factor)) 
+      baseline: (b as any).baseline ?? b.agents,  // Fall back to agents if baseline not present
+      predictive: (b as any).predictive ?? b.agents
     };
   });
 

@@ -43,6 +43,8 @@ class SimulationKpis(BaseModel):
 class RiskBucket(BaseModel):
     bracket: str
     agents: int
+    baseline: Optional[int] = None  # Heuristic-based (6ft/15min rule) distribution
+    predictive: Optional[int] = None  # Monte Carlo simulation results
 
 class GeoPoint(BaseModel):
     id: str

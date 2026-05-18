@@ -69,7 +69,7 @@ async def run_simulation(background_tasks: BackgroundTasks):
     )
     
     def run_full_task():
-        data = engine.get_full_simulation_data(iterations=20) 
+        data = engine.get_full_simulation_data(iterations=5)  # Fast: ~10-15 seconds
         DATA_STORE["full_data"] = data
         # Cache the results
         try:
@@ -106,7 +106,7 @@ async def recompute_with_intel(agent_id: str, intel: str, background_tasks: Back
     )
     
     def run_full_task():
-        data = engine.get_full_simulation_data(iterations=20)
+        data = engine.get_full_simulation_data(iterations=5)  # Fast: ~10-15 seconds
         DATA_STORE["full_data"] = data
         try:
             with open(os.path.join(DATA_DIR, "cached_simulation.json"), "w") as f:

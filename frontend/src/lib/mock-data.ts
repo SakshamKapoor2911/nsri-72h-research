@@ -301,16 +301,16 @@ function buildSpatialPoints(agents: AgentNode[], startDay: number, endDay: numbe
 }
 
 const riskDistribution: RiskBucket[] = [
-  { bracket: "0-10%", agents: 620 },   // Majority susceptible
-  { bracket: "10-20%", agents: 95 },   // Secondary contacts
-  { bracket: "20-30%", agents: 42 },   // Secondary exposed
-  { bracket: "30-40%", agents: 18 },   // Early secondary infections
-  { bracket: "40-50%", agents: 12 },   // Primary contacts
-  { bracket: "50-60%", agents: 5 },
-  { bracket: "60-70%", agents: 4 },
-  { bracket: "70-80%", agents: 2 },    // Highly exposed primary contacts
-  { bracket: "80-90%", agents: 1 },
-  { bracket: "90-100%", agents: 1 },   // Patient zero
+  { bracket: "0-10%", agents: 620, baseline: 380, predictive: 620 },   // Majority susceptible
+  { bracket: "10-20%", agents: 95, baseline: 120, predictive: 95 },    // Secondary contacts
+  { bracket: "20-30%", agents: 42, baseline: 150, predictive: 42 },    // Secondary exposed
+  { bracket: "30-40%", agents: 18, baseline: 85, predictive: 18 },     // Early secondary infections
+  { bracket: "40-50%", agents: 12, baseline: 42, predictive: 12 },     // Primary contacts
+  { bracket: "50-60%", agents: 5, baseline: 18, predictive: 5 },
+  { bracket: "60-70%", agents: 4, baseline: 12, predictive: 4 },
+  { bracket: "70-80%", agents: 2, baseline: 8, predictive: 2 },        // Highly exposed primary contacts
+  { bracket: "80-90%", agents: 1, baseline: 4, predictive: 1 },
+  { bracket: "90-100%", agents: 1, baseline: 2, predictive: 1 },       // Patient zero
 ];
 
 const recommendations: VoIRecommendation[] = [
