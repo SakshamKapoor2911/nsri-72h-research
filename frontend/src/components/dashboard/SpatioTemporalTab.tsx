@@ -194,6 +194,7 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
                         style={{
                           filter: `drop-shadow(0 0 ${0.3 + p.risk * 0.3}px ${color})`,
                           transition: 'all 0.3s ease',
+                          animation: 'popIn 0.5s ease-out forwards'
                         }}
                       />
                     </TooltipTrigger>
@@ -206,6 +207,14 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
                 </g>
               );
             })}
+
+            {/* Global animation definitions */}
+            <style>{`
+              @keyframes popIn {
+                0% { transform: scale(0); opacity: 0; }
+                100% { transform: scale(1); opacity: ${0.6 + 0.4}; }
+              }
+            `}</style>
 
             {/* origin pulse */}
             {arcs.length > 0 && (
