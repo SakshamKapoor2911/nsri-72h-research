@@ -76,7 +76,7 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
   const visiblePoints = useMemo(() => {
     if (!points) return [];
     const timeWindow = 0.25; // Show points within this range of current tick
-    return points.filter(p => Math.abs(p.tick - tick) <= timeWindow).slice(0, 1000); // Limit for performance
+    return points.filter(p => Math.abs(p.tick - tick) <= timeWindow); 
   }, [points, tick]);
 
   return (
