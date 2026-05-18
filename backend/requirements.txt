@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+numpy
+pandas
+scipy
+networkx
+pydantic
+python-multipart
+orjson
+numexpr
+python-dotenv
