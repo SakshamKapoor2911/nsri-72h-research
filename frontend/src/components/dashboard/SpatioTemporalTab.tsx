@@ -1,22 +1,25 @@
-import { Globe2, Play, Pause, RotateCcw } from "lucide-react";
+import { Globe2, Play, Pause, RotateCcw, Zap } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useTimeStore } from "@/store/useTimeStore";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { SpatialArc } from "@/types/api";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { SpatialArc, SpatialPoint } from "@/types/api";
 
 interface Props {
   startDay: number;
   endDay: number;
   arcs: SpatialArc[];
+  points?: SpatialPoint[];
 }
 
-// cyan (low risk) → crimson (high)
-function arcColor(risk: number): string {
+// Risk-based color mapping: cyan (low) → amber (medium) → crimson (high)
+function riskColor(risk: number): string {
   const stops: Array<[number, [number, number, number]]> = [
-    [0, [56, 189, 248]],   // cyan-400
-    [0.5, [251, 191, 36]], // amber-400
-    [1, [225, 29, 72]],    // rose-600
+    [0, [56, 189, 248]],   // cyan-400 (susceptible)
+    [0.33, [34, 197, 94]], // green-500 (exposed mild)
+    [0.66, [251, 191, 36]], // amber-400 (exposed moderate)
+    [1, [225, 29, 72]],    // rose-600 (infected/high risk)
   ];
   for (let i = 0; i < stops.length - 1; i++) {
     const [a, ca] = stops[i];
@@ -30,12 +33,15 @@ function arcColor(risk: number): string {
   return "rgb(225, 29, 72)";
 }
 
-export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
+export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
   const tick = useTimeStore((s) => s.currentTimeTick);
   const setTick = useTimeStore((s) => s.setCurrentTimeTick);
   const isPlaying = useTimeStore((s) => s.isPlaying);
   const setIsPlaying = useTimeStore((s) => s.setIsPlaying);
   const timerRef = useRef<number | null>(null);
+  const [showPoints, setShowPoints] = useState(true);
+  const [hoveredPoint, setHoveredPoint] = useState<SpatialPoint | null>(null);
+  const [hoveredArc, setHoveredArc] = useState<SpatialArc | null>(null);
 
   useEffect(() => {
     if (isPlaying) {
@@ -65,6 +71,13 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
   }, [isPlaying, endDay, setIsPlaying, setTick]);
 
   const activeVectorsCount = useMemo(() => arcs.filter(a => a.tick <= tick).length, [arcs, tick]);
+  
+  // Filter spatial points within ±0.25 days of current tick for smooth animation
+  const visiblePoints = useMemo(() => {
+    if (!points) return [];
+    const timeWindow = 0.25; // Show points within this range of current tick
+    return points.filter(p => Math.abs(p.tick - tick) <= timeWindow).slice(0, 1000); // Limit for performance
+  }, [points, tick]);
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -91,86 +104,140 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
         </svg>
 
         {/* arcs canvas */}
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 60" preserveAspectRatio="none">
-          {/* Historical Paths (Dotted Lines) */}
-          {arcs.filter(a => a.tick < Math.floor(tick)).map((a) => {
-             const x1 = a.from.x * 100;
-             const y1 = a.from.y * 60;
-             const x2 = a.to.x * 100;
-             const y2 = a.to.y * 60;
-             const mx = (x1 + x2) / 2;
-             const dist = Math.hypot(x2 - x1, y2 - y1);
-             const my = Math.min(y1, y2) - dist * 0.55;
-             return (
-               <path
-                 key={`path-${a.id}`}
-                 d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
-                 fill="none"
-                 stroke="rgba(148,163,184,0.15)"
-                 strokeWidth="0.15"
-                 strokeDasharray="1,2"
-                 opacity={0.4}
-               />
-             );
-          })}
+        <TooltipProvider delayDuration={100}>
+          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 60" preserveAspectRatio="none">
+            {/* Historical Paths (Dotted Lines) */}
+            {arcs.filter(a => a.tick < Math.floor(tick)).map((a) => {
+               const x1 = a.from.x * 100;
+               const y1 = a.from.y * 60;
+               const x2 = a.to.x * 100;
+               const y2 = a.to.y * 60;
+               const mx = (x1 + x2) / 2;
+               const dist = Math.hypot(x2 - x1, y2 - y1);
+               const my = Math.min(y1, y2) - dist * 0.55;
+               return (
+                 <path
+                   key={`path-${a.id}`}
+                   d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
+                   fill="none"
+                   stroke="rgba(148,163,184,0.15)"
+                   strokeWidth="0.15"
+                   strokeDasharray="1,2"
+                   opacity={0.4}
+                 />
+               );
+            })}
 
-          {arcs.filter(a => a.tick <= Math.ceil(tick)).map((a) => {
-            const x1 = a.from.x * 100;
-            const y1 = a.from.y * 60;
-            const x2 = a.to.x * 100;
-            const y2 = a.to.y * 60;
-            const mx = (x1 + x2) / 2;
-            const dist = Math.hypot(x2 - x1, y2 - y1);
-            const my = Math.min(y1, y2) - dist * 0.55;
-            const color = arcColor(a.riskDensity);
-            
-            // Progressive growth logic:
-            // If tick is 1.5 and a.tick is 1, it's 50% through its "appearing" day
-            const dayProgress = Math.max(0, Math.min(1, tick - a.tick + 1));
-            
-            // Faux path length for dash offset
-            // Q curve length is approx dist * 1.2
-            const pathLen = dist * 12; // multiplied for dash space
+            {arcs.filter(a => a.tick <= Math.ceil(tick)).map((a) => {
+              const x1 = a.from.x * 100;
+              const y1 = a.from.y * 60;
+              const x2 = a.to.x * 100;
+              const y2 = a.to.y * 60;
+              const mx = (x1 + x2) / 2;
+              const dist = Math.hypot(x2 - x1, y2 - y1);
+              const my = Math.min(y1, y2) - dist * 0.55;
+              
+              // Progressive growth logic:
+              // If tick is 1.5 and a.tick is 1, it's 50% through its "appearing" day
+              const dayProgress = Math.max(0, Math.min(1, tick - a.tick + 1));
+              
+              // Faux path length for dash offset
+              // Q curve length is approx dist * 1.2
+              const pathLen = dist * 12; // multiplied for dash space
 
-            return (
-              <g key={a.id}>
-                <path
-                  d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={0.35 + a.riskDensity * 0.5}
-                  strokeLinecap="round"
-                  strokeDasharray={pathLen}
-                  strokeDashoffset={pathLen * (1 - dayProgress)}
-                  opacity={dayProgress * 0.85}
-                  style={{ filter: `drop-shadow(0 0 1.2px ${color})` }}
-                />
-                {dayProgress > 0.95 && (
-                  <circle cx={x2} cy={y2} r={0.7 + a.riskDensity * 0.9} fill={color} opacity={0.9} />
-                )}
+              return (
+                <g 
+                  key={a.id}
+                  onMouseEnter={() => setHoveredArc(a)}
+                  onMouseLeave={() => setHoveredArc(null)}
+                  className="cursor-pointer"
+                >
+                  <path
+                    d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
+                    fill="none"
+                    stroke={riskColor(a.riskDensity)}
+                    strokeWidth={hoveredArc?.id === a.id ? (0.35 + a.riskDensity * 0.5) * 2 : 0.35 + a.riskDensity * 0.5}
+                    strokeLinecap="round"
+                    strokeDasharray={pathLen}
+                    strokeDashoffset={pathLen * (1 - dayProgress)}
+                    opacity={dayProgress * 0.85}
+                    style={{ filter: `drop-shadow(0 0 1.2px ${riskColor(a.riskDensity)})` }}
+                  />
+                  {dayProgress > 0.95 && (
+                    <circle cx={x2} cy={y2} r={hoveredArc?.id === a.id ? (0.7 + a.riskDensity * 0.9) * 1.5 : 0.7 + a.riskDensity * 0.9} fill={riskColor(a.riskDensity)} opacity={0.9} />
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Spatial Points Layer - 800+ individual agent locations */}
+            {showPoints && visiblePoints.map((p) => {
+              const x = p.x * 100;
+              const y = p.y * 60;
+              const color = riskColor(p.risk);
+              const size = 0.3 + p.risk * 0.5; // Larger points for higher risk
+              const opacity = 0.6 + p.risk * 0.4; // Higher opacity for higher risk
+              
+              return (
+                <g key={p.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={hoveredPoint?.id === p.id ? size * 2 : size}
+                        fill={color}
+                        opacity={opacity}
+                        onMouseEnter={() => setHoveredPoint(p)}
+                        onMouseLeave={() => setHoveredPoint(null)}
+                        className="cursor-pointer"
+                        style={{
+                          filter: `drop-shadow(0 0 ${0.3 + p.risk * 0.3}px ${color})`,
+                          transition: 'all 0.3s ease',
+                        }}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-[10px] bg-background/90 border border-primary/20">
+                      <p className="font-bold">{p.label}</p>
+                      <p>Risk: {(p.risk * 100).toFixed(1)}%</p>
+                      <p>Status: {p.status}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </g>
+              );
+            })}
+
+            {/* origin pulse */}
+            {arcs.length > 0 && (
+              <g>
+                <circle cx={arcs[0].from.x * 100} cy={arcs[0].from.y * 60} r="1.6" fill="rgb(225,29,72)" />
+                <circle cx={arcs[0].from.x * 100} cy={arcs[0].from.y * 60} r="3" fill="none" stroke="rgb(225,29,72)" strokeWidth="0.2" opacity="0.5">
+                  <animate attributeName="r" from="1.6" to="5" dur="2.4s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" from="0.6" to="0" dur="2.4s" repeatCount="indefinite" />
+                </circle>
               </g>
-            );
-          })}
-          {/* origin pulse */}
-          {arcs.length > 0 && (
-            <g>
-              <circle cx={arcs[0].from.x * 100} cy={arcs[0].from.y * 60} r="1.6" fill="rgb(225,29,72)" />
-              <circle cx={arcs[0].from.x * 100} cy={arcs[0].from.y * 60} r="3" fill="none" stroke="rgb(225,29,72)" strokeWidth="0.2" opacity="0.5">
-                <animate attributeName="r" from="1.6" to="5" dur="2.4s" repeatCount="indefinite" />
-                <animate attributeName="opacity" from="0.6" to="0" dur="2.4s" repeatCount="indefinite" />
-              </circle>
-            </g>
-          )}
-        </svg>
+            )}
+          </svg>
+        </TooltipProvider>
 
         <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground backdrop-blur">
-          <Globe2 className="h-3 w-3 text-primary" /> deck.gl ArcLayer · 3D Geo Viewport
+          <Globe2 className="h-3 w-3 text-primary" /> 800+ Spatial Points · Risk Heatmap
         </div>
-        <div className="pointer-events-none absolute right-3 top-3 rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] tabular-nums text-primary backdrop-blur">
-          {activeVectorsCount} active vectors · day {tick.toFixed(2)}
+        <div className="pointer-events-auto absolute right-3 top-3 flex items-center gap-2">
+          <button
+            onClick={() => setShowPoints(!showPoints)}
+            className="rounded-sm bg-background/50 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground hover:text-primary hover:bg-primary/10 backdrop-blur transition-colors"
+            title={showPoints ? "Hide spatial points" : "Show spatial points"}
+          >
+            <Zap className="h-3 w-3 inline mr-1" />
+            {showPoints ? "Hide" : "Show"} Points
+          </button>
+          <div className="rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] tabular-nums text-primary backdrop-blur">
+            {visiblePoints.length} visible · day {tick.toFixed(2)}
+          </div>
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-          <ArcLegend />
+          <ArcLegend totalPoints={visiblePoints.length} activeCases={Math.floor(tick * 5)} />
           <span>origin: Cruise Terminal A · 36.7°N / -76.0°W</span>
         </div>
       </div>
@@ -226,12 +293,21 @@ export function SpatioTemporalTab({ startDay, endDay, arcs }: Props) {
   );
 }
 
-function ArcLegend() {
+function ArcLegend({ totalPoints, activeCases }: { totalPoints: number, activeCases: number }) {
   return (
-    <div className="flex items-center gap-2 rounded-sm bg-background/50 px-2 py-1 backdrop-blur">
-      <span>Exposure density</span>
-      <div className="h-1.5 w-24 rounded-full" style={{ background: "linear-gradient(90deg, rgb(56,189,248), rgb(251,191,36), rgb(225,29,72))" }} />
-      <span className="text-[9px] uppercase tracking-wider">low → high</span>
+    <div className="flex items-center gap-4 rounded-sm bg-background/50 px-3 py-2 backdrop-blur text-[9px]">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <span className="uppercase tracking-wider font-semibold">Risk:</span>
+          <div className="h-1.5 w-20 rounded-full" style={{ background: "linear-gradient(90deg, rgb(56,189,248) 0%, rgb(34,197,94) 33%, rgb(251,191,36) 66%, rgb(225,29,72) 100%)" }} />
+          <span className="uppercase tracking-wider text-muted-foreground">low → high</span>
+        </div>
+      </div>
+      <div className="h-3 w-px bg-border" />
+      <div className="flex items-center gap-2 uppercase tracking-wider">
+        <span>Points: <span className="text-primary font-mono">{totalPoints}</span></span>
+        <span>Cases: <span className="text-rose-500 font-mono">{activeCases}</span></span>
+      </div>
     </div>
   );
 }
