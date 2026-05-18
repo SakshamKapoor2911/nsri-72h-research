@@ -29,6 +29,7 @@ htmlcov/
 
 # Data (Generated)
 backend/*.json
+docs/72-HR-IDEA.md
 
 # Wrangler / Cloudflare
 .wrangler/
