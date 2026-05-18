@@ -29,7 +29,7 @@ DATA_STORE = {
 
 # Resolve the backend directory path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "backend")
+DATA_DIR = BASE_DIR
 print(f"Data directory: {DATA_DIR}")
 
 @app.on_event("startup")
