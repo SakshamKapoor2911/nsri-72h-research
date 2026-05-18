@@ -396,7 +396,7 @@ class SpatialExposureEngine:
                         
                         arcs.append({
                             "id": f"arc-{len(arcs)}",
-                            "from_node": {"id": last_loc, "label": from_loc['name'], "x": normalize(*from_loc['coords'])[0], "y": normalize(*from_loc['coords'])[1]},
+                            "from": {"id": last_loc, "label": from_loc['name'], "x": normalize(*from_loc['coords'])[0], "y": normalize(*from_loc['coords'])[1]},
                             "to": {"id": loc_id, "label": to_loc['name'], "x": normalize(*to_loc['coords'])[0], "y": normalize(*to_loc['coords'])[1]},
                             "riskDensity": random.uniform(0.6, 0.95),
                             "tick": float(day_idx + day_progress)

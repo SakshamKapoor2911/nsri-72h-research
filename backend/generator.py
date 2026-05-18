@@ -29,8 +29,16 @@ def generate_locations_context():
     print("Generated expanded locations_context.json")
 
 def generate_trajectories(num_casual=800):
-    start_time = datetime(2026, 5, 18, 8, 0, 0)
-    ticks = [start_time + timedelta(minutes=5 * i) for i in range(144)]
+    start_date = datetime(2026, 5, 18, 8, 0, 0)
+    # Generate 7 days of data, 15-minute intervals
+    days = 7
+    ticks_per_day = 16 # 8am to 12pm (approx 4 hours) - let's do more
+    # 8am to 8pm = 12 hours. 4 ticks per hour = 48 ticks per day.
+    ticks = []
+    for d in range(days):
+        day_start = start_date + timedelta(days=d)
+        for i in range(48):
+            ticks.append(day_start + timedelta(minutes=15 * i))
     
     with open("locations_context.json", "r") as f:
         locations_meta = json.load(f)
@@ -43,11 +51,13 @@ def generate_trajectories(num_casual=800):
     # 1. Patient Zero (The Super-Spreader)
     p0_timeline = []
     for i, t in enumerate(ticks):
-        if i < 36: loc = "loc_bus_stop" # Commute
-        elif i < 72: loc = "loc_classroom_01" # Class
-        elif i < 96: loc = "loc_dining_hall" # Lunch
-        elif i < 120: loc = "loc_gym" # Workout
-        else: loc = "loc_dorm_lounge" # Evening
+        # Daily cycle
+        day_tick = i % 48
+        if day_tick < 12: loc = "loc_bus_stop" 
+        elif day_tick < 24: loc = "loc_classroom_01"
+        elif day_tick < 32: loc = "loc_dining_hall"
+        elif day_tick < 40: loc = "loc_gym"
+        else: loc = "loc_dorm_lounge"
         
         coord = [loc_coords[loc][0] + random.uniform(-0.0001, 0.0001), 
                  loc_coords[loc][1] + random.uniform(-0.0001, 0.0001)]
@@ -58,20 +68,20 @@ def generate_trajectories(num_casual=800):
     # 2. Add Routines for Casual Agents
     for a in range(num_casual):
         timeline = []
-        # Assign a "type" of student
         routine_type = random.choice(["studious", "athlete", "social", "commuter"])
         
         current_loc = random.choice(loc_ids)
         for i, t in enumerate(ticks):
+            day_tick = i % 48
             # Routine logic
-            if routine_type == "studious" and 36 < i < 100: current_loc = "loc_library"
-            elif routine_type == "athlete" and 100 < i < 130: current_loc = "loc_gym"
-            elif i % 24 == 0: current_loc = random.choice(loc_ids) # Change loc every 2 hours
+            if routine_type == "studious" and 12 < day_tick < 32: current_loc = "loc_library"
+            elif routine_type == "athlete" and 32 < day_tick < 40: current_loc = "loc_gym"
+            elif day_tick % 12 == 0: current_loc = random.choice(loc_ids) 
             
             coord = [loc_coords[current_loc][0] + random.uniform(-0.0005, 0.0005), 
                      loc_coords[current_loc][1] + random.uniform(-0.0005, 0.0005)]
             
-            if random.random() > 0.05: # 5% packet loss
+            if random.random() > 0.05: 
                 timeline.append({"timestamp": t.isoformat() + "Z", "coordinates": coord, "location_id": current_loc})
         
         trajectories.append({

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 import json
@@ -38,6 +38,16 @@ async def startup_event():
     if os.path.exists("pathogen_config.json"):
         with open("pathogen_config.json", "r") as f:
             DATA_STORE["pathogen"] = json.load(f)
+    
+    # Load cached simulation if available
+    if os.path.exists("cached_simulation.json"):
+        try:
+            with open("cached_simulation.json", "r") as f:
+                DATA_STORE["full_data"] = json.load(f)
+            print("Loaded cached simulation data.")
+        except Exception as e:
+            print(f"Error loading cache: {e}")
+            
     print("Data loaded into EpiNexus Backend.")
 
 @app.post("/simulation/run")
@@ -49,8 +59,15 @@ async def run_simulation(background_tasks: BackgroundTasks):
     )
     
     def run_full_task():
-        data = engine.get_full_simulation_data(iterations=20) # Lower for performance
+        data = engine.get_full_simulation_data(iterations=20) 
         DATA_STORE["full_data"] = data
+        # Cache the results
+        try:
+            with open("cached_simulation.json", "w") as f:
+                json.dump(data, f)
+            print("Simulation results cached.")
+        except Exception as e:
+            print(f"Error caching results: {e}")
     
     background_tasks.add_task(run_full_task)
     return {"status": "Simulation started"}
@@ -81,6 +98,12 @@ async def recompute_with_intel(agent_id: str, intel: str, background_tasks: Back
     def run_full_task():
         data = engine.get_full_simulation_data(iterations=20)
         DATA_STORE["full_data"] = data
+        try:
+            with open("cached_simulation.json", "w") as f:
+                json.dump(data, f)
+            print("Recomputed results cached.")
+        except Exception as e:
+            print(f"Error caching results: {e}")
     
     background_tasks.add_task(run_full_task)
     return {"status": "Recomputation triggered with field intel"}
@@ -88,13 +111,7 @@ async def recompute_with_intel(agent_id: str, intel: str, background_tasks: Back
 @app.get("/api/simulation", response_model=SimulationData)
 async def get_simulation_data():
     if DATA_STORE["full_data"] is None:
-        # Initial run if no data exists
-        engine = SpatialExposureEngine(
-            DATA_STORE["trajectories"], 
-            DATA_STORE["locations"], 
-            DATA_STORE["pathogen"]
-        )
-        DATA_STORE["full_data"] = engine.get_full_simulation_data(iterations=10)
+        raise HTTPException(status_code=404, detail="Simulation data not yet computed. Please run the simulation first.")
     
     return DATA_STORE["full_data"]
 

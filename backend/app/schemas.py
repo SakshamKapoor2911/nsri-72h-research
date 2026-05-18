@@ -12,6 +12,12 @@ class AgentNode(BaseModel):
     confidenceInterval: ConfidenceInterval
     status: str # "infected" | "exposed" | "susceptible"
     visitedLocations: List[str]
+    primaryLocation: Optional[str] = None
+
+class NetworkLink(BaseModel):
+    source: str
+    target: str
+    weight: float
 
 class VoIRecommendation(BaseModel):
     id: str
@@ -45,14 +51,16 @@ class SpatialArc(BaseModel):
     from_node: GeoPoint = Field(alias="from")
     to: GeoPoint
     riskDensity: float
-    tick: int
+    tick: float
 
     class Config:
         populate_by_name = True
+        allow_population_by_field_name = True
 
 class SimulationData(BaseModel):
     kpis: SimulationKpis
     agents: List[AgentNode]
+    links: List[NetworkLink]
     recommendations: List[VoIRecommendation]
     environmentalAlerts: List[EnvironmentalAlert]
     riskDistribution: List[RiskBucket]

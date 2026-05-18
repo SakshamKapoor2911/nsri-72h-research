@@ -14,12 +14,16 @@ engine = SpatialExposureEngine(trajectories, locations, pathogen)
 
 # Run a single simulation
 print("Running single simulation...")
-probs, heatmap = engine.run_single_simulation()
+probs, contacts = engine.run_single_simulation()
 
 # Check some results
-p0_risk = probs.get("ind_patient_zero", "N/A")
-shadow_risk = probs.get("ind_shadow_0", "N/A")
-ghost_risk = probs.get("ind_ghost_0", "N/A")
+def get_risk(agent_id):
+    idx = engine.agent_id_to_idx.get(agent_id)
+    return probs[idx] if idx is not None else "N/A"
+
+p0_risk = get_risk("ind_patient_zero")
+shadow_risk = get_risk("ind_shadow_0")
+ghost_risk = get_risk("ind_ghost_0")
 
 print(f"Patient Zero Risk: {p0_risk}")
 print(f"Shadow Agent 0 Risk: {shadow_risk}")
@@ -27,7 +31,7 @@ print(f"Ghost Agent 0 Risk: {ghost_risk}")
 
 # Run quick Monte Carlo
 print("\nRunning quick Monte Carlo (5 iterations)...")
-summary = engine.run_monte_carlo(iterations=5)
+summary, links = engine.run_monte_carlo(iterations=5)
 voi_summary = engine.calculate_voi(summary)
 
 print("\nTop 5 Resource Allocation Recommendations (VoI):")
