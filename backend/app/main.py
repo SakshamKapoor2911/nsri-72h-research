@@ -27,7 +27,7 @@ DATA_STORE = {
     "full_data": None
 }
 
-DATA_DIR = "backend"
+DATA_DIR = "."
 
 @app.on_event("startup")
 async def startup_event():
