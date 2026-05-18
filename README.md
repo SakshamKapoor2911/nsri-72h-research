@@ -35,7 +35,7 @@ graph TD
 ```
 
 ## 🚀 Key Features
-- **Ghost Virus Model:** Tracks environmental viral decay ($V_{loc}(t)$) based on ACH and half-life.
+- **Ghost Virus Model:** Tracks environmental viral decay (`V_loc(t)`) based on ACH and half-life.
 - **Spatial Optimization:** Uses `cKDTree` to handle thousands of agents without $O(N^2)$ bottlenecks.
 - **Uncertainty Halos:** Visualizes 95% Confidence Intervals as dynamic halos in a WebGL-accelerated graph.
 - **Active Learning:** Recommends the "next most valuable" person to test to reduce total system entropy.

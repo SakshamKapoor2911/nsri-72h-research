@@ -10,13 +10,13 @@ EpiNexus is a decision-support system for public health officials during localiz
 - **Active Resource Allocation:** Minimize "Value of Information" (VoI) entropy to reduce diagnostic testing waste.
 
 ## 3. Functional Requirements
-- **F1: Ghost Virus Kernel:** Track environmental viral decay $V_{loc}(t)$ as a function of ACH and pathogen half-life.
+- **F1: Ghost Virus Kernel:** Track environmental viral decay `V_loc(t)` as a function of ACH and pathogen half-life.
 - **F2: Spatial Querying:** Implement `cKDTree` for neighbor discovery to prevent $O(N^2)$ bottlenecks.
 - **F3: Monte Carlo Ensemble:** Generate risk distributions and 95% CIs via stochastic parameter sampling.
 - **F4: VoI Optimizer:** Identify nodes that maximize system-wide entropy reduction when tested.
 - **F5: Decoupled Dashboard:**
     - **Topology View:** `react-force-graph` with interactive "Risk Halos."
-    - **Temporal Map:** `deck.gl` with $V_{loc}(t)$ heatmap layer.
+    - **Temporal Map:** `deck.gl` with `V_loc(t)` heatmap layer.
 - **F6: Asynchronous Execution:** FastAPI background tasks for heavy Monte Carlo compute.
 
 ## 4. User Stories (Updated)

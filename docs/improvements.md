@@ -6,7 +6,7 @@ Based on the feedback above, the following architectural and documentation fixes
 
 1.  **Tech Stack Upgrade:** Shifted to a decoupled **FastAPI (Backend) + Next.js (Frontend)** architecture.
 2.  **Computational Bottleneck Fix:** Implemented **Spatial Indexing via `scipy.spatial.cKDTree`**.
-3.  **Epidemiological Rigor:** Implemented the **"Ghost Virus" Environmental Decay** model ($V_{loc}(t)$).
+3.  **Epidemiological Rigor:** Implemented the **"Ghost Virus" Environmental Decay** model (`V_loc(t)`).
 4.  **Network Validity:** Enforced **Directed Acyclic Graph (DAG)** constraints.
 5.  **Pitch & Strategy:** Created a comprehensive pitch document and demo script.
 
