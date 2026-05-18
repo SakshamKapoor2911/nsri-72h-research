@@ -64,47 +64,63 @@ export function AgentDrawer({ agents }: Props) {
                 <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                   Agent Profile · Clinical Detail
                 </span>
-                <span className="rounded-sm bg-[var(--color-infected)]/15 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[var(--color-infected)]">
+                <span className={`rounded-sm px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+                  agent.status === 'infected' ? 'bg-[var(--color-infected)]/15 text-[var(--color-infected)]' :
+                  agent.status === 'exposed' ? 'bg-[var(--color-exposed)]/15 text-[var(--color-exposed)]' :
+                  agent.status === 'protected' ? 'bg-green-500/15 text-green-500' :
+                  'bg-blue-500/15 text-blue-500'
+                }`}>
                   {agent.status}
                 </span>
               </div>
               <SheetTitle className="font-mono text-xl font-semibold tracking-tight text-foreground">
-                {agent.id}
+                {agent.name ?? agent.id}
               </SheetTitle>
-              <SheetDescription className="text-xs">
-                {agent.isPatientZero ? "Index case · patient zero" : "Active learning candidate · awaiting PCR triage"}
+              <SheetDescription className="text-xs font-medium text-primary">
+                {agent.occupation} · {agent.isPatientZero ? "Index Case" : "Subject of Interest"}
               </SheetDescription>
             </SheetHeader>
 
             <div className="flex-1 space-y-5 p-5">
-              {/* Layman Summary */}
+              {/* Algorithmic Reasoning Summary */}
               <section className="rounded-md border border-primary/20 bg-primary/5 p-4 text-[11px] leading-relaxed text-muted-foreground">
                 <div className="mb-2 flex items-center gap-1.5 font-bold uppercase tracking-wider text-primary">
-                  <Sparkles className="h-3 w-3" /> Quick Insight
+                  <Sparkles className="h-3 w-3" /> Algorithmic Reasoning
                 </div>
-                {agent.meanRisk > 0.6 
-                  ? "This individual has had significant overlap with known infection zones. Immediate testing is strongly advised." 
-                  : agent.meanRisk > 0.2 
-                  ? "Moderate exposure detected. This agent is a key candidate for testing to help us better understand the local spread." 
-                  : "Low risk detected. Continue monitoring baseline spatial data."}
+                {agent.statusReasoning ?? "Awaiting posterior analysis..."}
               </section>
 
               {/* Risk metrics */}
+              <div className="grid grid-cols-2 gap-4">
+                <section className="space-y-3 rounded-md border bg-background/40 p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Mean Risk
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-2xl font-semibold tabular-nums text-[var(--color-infected)]">
+                      {(agent.meanRisk * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </section>
+                <section className="space-y-3 rounded-md border bg-background/40 p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Protection Level
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-2xl font-semibold tabular-nums text-green-500">
+                      {(agent.protectionLevel * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </section>
+              </div>
+
               <section className="space-y-3 rounded-md border bg-background/40 p-4">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Posterior Risk
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-3xl font-semibold tabular-nums text-[var(--color-infected)]">
-                    {(agent.meanRisk * 100).toFixed(1)}%
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    mean
-                  </span>
+                  Risk Distribution (95% CI)
                 </div>
                 <CIBar lower={agent.confidenceInterval.lower} upper={agent.confidenceInterval.upper} mean={agent.meanRisk} />
                 <div className="flex justify-between font-mono text-[11px] tabular-nums text-muted-foreground">
-                  <span>95% CI lower · <span className="text-foreground">{(agent.confidenceInterval.lower * 100).toFixed(1)}%</span></span>
+                  <span>lower · <span className="text-foreground">{(agent.confidenceInterval.lower * 100).toFixed(1)}%</span></span>
                   <span>upper · <span className="text-foreground">{(agent.confidenceInterval.upper * 100).toFixed(1)}%</span></span>
                 </div>
               </section>

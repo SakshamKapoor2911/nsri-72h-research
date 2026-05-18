@@ -302,28 +302,48 @@ class SpatialExposureEngine:
 
         for s in summary:
             ind_data = next(ind for ind in self.trajectories if ind['individual_id'] == s['individual_id'])
+            mean_risk = s['mean_risk']
+            vuln = ind_data.get('vulnerability_score', 0.5)
+            # Protection level could be derived from metadata or routine
+            protection = 1.0 - vuln 
             
-            # Logic Fix: Patient Zero is always 100% risk and 'infected'
+            reasoning = ""
             if ind_data['is_patient_zero']:
-                mean_risk = 1.0
                 status = "infected"
+                mean_risk = 1.0
                 confidence = {"lower": 1.0, "upper": 1.0}
+                reasoning = "Primary infection source (Patient Zero). High viral shedding observed."
             else:
-                mean_risk = s['mean_risk']
-                status = "susceptible"
-                if mean_risk > 0.6: status = "exposed"
-                elif mean_risk > 0.1: status = "exposed"
                 confidence = {"lower": s['ci_lower'], "upper": s['ci_upper']}
-            
+                
+                # Algorithmic Status Determination
+                if mean_risk > 0.8:
+                    status = "exposed"
+                    reasoning = f"Critical exposure level ({mean_risk*100:.1f}%). Repeated spatial proximity to infection source detected."
+                elif mean_risk > 0.15:
+                    if vuln < 0.3:
+                        status = "protected"
+                        reasoning = f"Elevated risk ({mean_risk*100:.1f}%), but categorized as Protected due to high physiological resilience (Vuln: {vuln:.2f})."
+                    else:
+                        status = "exposed"
+                        reasoning = f"Significant exposure ({mean_risk*100:.1f}%) with moderate vulnerability ({vuln:.2f}). Monitoring required."
+                else:
+                    status = "susceptible"
+                    reasoning = f"Low cumulative dosage (Risk: {mean_risk*100:.1f}%). Social distancing and environmental factors maintained safe threshold."
+
             p_loc_id = primary_loc_map.get(s['individual_id'])
             primary_loc_name = self.locations[p_loc_id]['name'] if p_loc_id else None
 
             agents.append({
                 "id": s['individual_id'],
+                "name": ind_data.get('name', s['individual_id']),
+                "occupation": ind_data.get('occupation', "Student"),
                 "isPatientZero": ind_data['is_patient_zero'],
                 "meanRisk": mean_risk,
                 "confidenceInterval": confidence,
                 "status": status,
+                "statusReasoning": reasoning,
+                "protectionLevel": float(protection),
                 "visitedLocations": [self.locations[l]['name'] for l in ind_loc_map.get(s['individual_id'], [])],
                 "primaryLocation": primary_loc_name
             })

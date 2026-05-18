@@ -27,10 +27,10 @@ export function GlobalDataView({ agents }: Props) {
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
               <TableRow>
-                <TableHead className="w-[120px] font-mono text-[10px] uppercase">Agent ID</TableHead>
+                <TableHead className="w-[180px] font-mono text-[10px] uppercase">Identity</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase">Status</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase">Mean Risk</TableHead>
-                <TableHead className="font-mono text-[10px] uppercase">95% CI</TableHead>
+                <TableHead className="font-mono text-[10px] uppercase">95% CI Range</TableHead>
                 <TableHead className="font-mono text-[10px] uppercase">Locations Visited</TableHead>
               </TableRow>
             </TableHeader>
@@ -43,18 +43,18 @@ export function GlobalDataView({ agents }: Props) {
                 >
                   <TableCell className="font-mono text-xs font-medium">
                     {agent.isPatientZero && <span className="mr-1 text-[var(--color-infected)]">●</span>}
-                    {agent.id}
+                    {agent.name ?? agent.id}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={`text-[10px] uppercase ${getStatusColor(agent.status)}`}>
                       {agent.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums">
+                  <TableCell className="font-mono text-xs tabular-nums font-bold">
                     {(agent.meanRisk * 100).toFixed(1)}%
                   </TableCell>
                   <TableCell className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                    [{agent.confidenceInterval.lower.toFixed(2)}, {agent.confidenceInterval.upper.toFixed(2)}]
+                    {(agent.confidenceInterval.lower * 100).toFixed(1)}% - {(agent.confidenceInterval.upper * 100).toFixed(1)}%
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate font-mono text-[10px] text-muted-foreground">
                     {agent.visitedLocations?.join(", ")}
@@ -73,7 +73,8 @@ function getStatusColor(status: string) {
   switch (status) {
     case "infected": return "border-[var(--color-infected)] text-[var(--color-infected)] bg-[var(--color-infected)]/10";
     case "exposed": return "border-[var(--color-exposed)] text-[var(--color-exposed)] bg-[var(--color-exposed)]/10";
+    case "protected": return "border-green-500 text-green-500 bg-green-500/10";
     case "susceptible": return "border-[var(--color-susceptible)] text-[var(--color-susceptible)] bg-[var(--color-susceptible)]/10";
-    default: return "";
+    default: return "border-blue-500 text-blue-500 bg-blue-500/10";
   }
 }

@@ -2,6 +2,7 @@ import json
 import random
 import numpy as np
 from datetime import datetime, timedelta
+from llm_utils import get_realistic_personas
 
 def generate_pathogen_config():
     config = {
@@ -30,10 +31,7 @@ def generate_locations_context():
 
 def generate_trajectories(num_casual=800):
     start_date = datetime(2026, 5, 18, 8, 0, 0)
-    # Generate 7 days of data, 15-minute intervals
     days = 7
-    ticks_per_day = 16 # 8am to 12pm (approx 4 hours) - let's do more
-    # 8am to 8pm = 12 hours. 4 ticks per hour = 48 ticks per day.
     ticks = []
     for d in range(days):
         day_start = start_date + timedelta(days=d)
@@ -46,12 +44,24 @@ def generate_trajectories(num_casual=800):
     loc_ids = list(locations_meta.keys())
     loc_coords = {k: v["coords"] for k, v in locations_meta.items()}
 
+    # Fetch LLM Personas
+    print("Fetching realistic personas from Groq...")
+    personas = get_realistic_personas(count=20)
+    if not personas:
+        personas = [
+            {"name": "Dr. Aris Thorne", "occupation": "Epidemiology Professor", "routine": "Library and Classroom", "vulnerability_score": 0.3},
+            {"name": "Marcus Chen", "occupation": "Graduate Researcher", "routine": "Library and Lab", "vulnerability_score": 0.4},
+            {"name": "Sarah Jenkins", "occupation": "Undergraduate Student", "routine": "Gym and Quad", "vulnerability_score": 0.2},
+            {"name": "Robert Miller", "occupation": "Campus Security", "routine": "Bus Stop and Quad", "vulnerability_score": 0.5},
+            {"name": "Elena Rodriguez", "occupation": "Cafeteria Staff", "routine": "Dining Hall", "vulnerability_score": 0.6}
+        ]
+
     trajectories = []
 
     # 1. Patient Zero (The Super-Spreader)
+    p0_persona = random.choice(personas)
     p0_timeline = []
     for i, t in enumerate(ticks):
-        # Daily cycle
         day_tick = i % 48
         if day_tick < 12: loc = "loc_bus_stop" 
         elif day_tick < 24: loc = "loc_classroom_01"
@@ -63,20 +73,35 @@ def generate_trajectories(num_casual=800):
                  loc_coords[loc][1] + random.uniform(-0.0001, 0.0001)]
         p0_timeline.append({"timestamp": t.isoformat() + "Z", "coordinates": coord, "location_id": loc})
     
-    trajectories.append({"individual_id": "ind_patient_zero", "is_patient_zero": True, "vulnerability_score": 0.45, "timeline": p0_timeline})
+    trajectories.append({
+        "individual_id": "ind_patient_zero", 
+        "name": p0_persona['name'] + " (P0)",
+        "occupation": p0_persona['occupation'],
+        "is_patient_zero": True, 
+        "vulnerability_score": p0_persona['vulnerability_score'], 
+        "timeline": p0_timeline
+    })
 
     # 2. Add Routines for Casual Agents
     for a in range(num_casual):
+        persona = random.choice(personas)
         timeline = []
-        routine_type = random.choice(["studious", "athlete", "social", "commuter"])
         
         current_loc = random.choice(loc_ids)
         for i, t in enumerate(ticks):
             day_tick = i % 48
-            # Routine logic
-            if routine_type == "studious" and 12 < day_tick < 32: current_loc = "loc_library"
-            elif routine_type == "athlete" and 32 < day_tick < 40: current_loc = "loc_gym"
-            elif day_tick % 12 == 0: current_loc = random.choice(loc_ids) 
+            
+            # More varied routine logic based on persona
+            if "Professor" in persona['occupation'] or "Researcher" in persona['occupation']:
+                if 12 < day_tick < 36: current_loc = "loc_library" if random.random() > 0.3 else "loc_classroom_01"
+            elif "Staff" in persona['occupation']:
+                if 12 < day_tick < 40: current_loc = "loc_dining_hall"
+            elif "Security" in persona['occupation']:
+                current_loc = random.choice(["loc_bus_stop", "loc_outdoor_quad"])
+            else: # Student
+                if 12 < day_tick < 24: current_loc = "loc_classroom_01"
+                elif 32 < day_tick < 40: current_loc = "loc_gym"
+                elif day_tick % 12 == 0: current_loc = random.choice(loc_ids) 
             
             coord = [loc_coords[current_loc][0] + random.uniform(-0.0005, 0.0005), 
                      loc_coords[current_loc][1] + random.uniform(-0.0005, 0.0005)]
@@ -86,14 +111,16 @@ def generate_trajectories(num_casual=800):
         
         trajectories.append({
             "individual_id": f"ind_agent_{a}",
+            "name": f"{persona['name']} {a}", # Make names unique-ish
+            "occupation": persona['occupation'],
             "is_patient_zero": False,
-            "vulnerability_score": random.uniform(0.1, 0.9),
+            "vulnerability_score": max(0.1, min(0.9, persona['vulnerability_score'] + random.uniform(-0.1, 0.1))),
             "timeline": timeline
         })
 
     with open("trajectories.json", "w") as f:
         json.dump(trajectories, f, indent=2)
-    print(f"Generated trajectories.json with {len(trajectories)} agents.")
+    print(f"Generated trajectories.json with {len(trajectories)} agents and LLM-enhanced personas.")
 
 if __name__ == "__main__":
     generate_pathogen_config()

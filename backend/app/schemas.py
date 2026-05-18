@@ -7,10 +7,14 @@ class ConfidenceInterval(BaseModel):
 
 class AgentNode(BaseModel):
     id: str
+    name: Optional[str] = None
+    occupation: Optional[str] = None
     isPatientZero: bool
     meanRisk: float
     confidenceInterval: ConfidenceInterval
-    status: str # "infected" | "exposed" | "susceptible"
+    status: str # "infected" | "exposed" | "susceptible" | "protected"
+    statusReasoning: Optional[str] = None
+    protectionLevel: float = 0.0 # 0.0 to 1.0
     visitedLocations: List[str]
     primaryLocation: Optional[str] = None
 

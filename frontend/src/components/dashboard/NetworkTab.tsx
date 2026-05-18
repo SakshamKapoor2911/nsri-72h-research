@@ -48,6 +48,7 @@ export function NetworkTab({ agents, links }: Props) {
       let color = "var(--color-susceptible)";
       if (agent.status === "infected") color = "var(--color-infected)";
       else if (agent.status === "exposed") color = "var(--color-exposed)";
+      else if (agent.status === "protected") color = "rgba(34, 197, 94, 1)"; // green-500
 
       return {
         ...agent,
@@ -122,7 +123,7 @@ export function NetworkTab({ agents, links }: Props) {
             onClick={() => openAgent(n.id)}
             className="group absolute -translate-x-1/2 -translate-y-1/2 z-10"
             style={{ left: n.x, top: n.y }}
-            title={`${n.id} (${(n.meanRisk * 100).toFixed(1)}%) @ ${n.primaryLocation || 'Unknown'}`}
+            title={`${n.name || n.id} (${(n.meanRisk * 100).toFixed(1)}%) · ${n.occupation} @ ${n.primaryLocation || 'Unknown'}`}
           >
             <span
               className="block rounded-full ring-1 ring-offset-1 ring-offset-[var(--color-panel)] transition group-hover:scale-150"
@@ -151,6 +152,7 @@ export function NetworkTab({ agents, links }: Props) {
         <div className="flex flex-wrap items-center gap-5 text-xs">
           <LegendDot color="var(--color-infected)" label="Infected" />
           <LegendDot color="var(--color-exposed)" label="Exposed" />
+          <LegendDot color="rgba(34, 197, 94, 1)" label="Protected" />
           <LegendDot color="var(--color-susceptible)" label="Susceptible" />
           <div className="flex items-center gap-2 ml-2 border-l pl-5 border-muted-foreground/30">
             <div className="h-[1px] w-6 bg-muted-foreground/50 border-t border-dashed" />
