@@ -2,6 +2,8 @@
 
 EpiNexus is a high-fidelity epidemiological decision-support platform designed for localized outbreak control. By combining physics-informed viral modeling with advanced spatial indexing, EpiNexus allows public health officials to visualize transmission networks and optimize testing resources in real-time.
 
+![EpiNexus Dashboard](UI.png)
+
 ---
 
 ## 💎 Real-World Impact & Value
