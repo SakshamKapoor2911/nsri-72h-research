@@ -5,7 +5,7 @@ echo ==========================================
 
 :: Start Backend
 echo Starting Backend...
-start "EpiNexus Backend" cmd /k "cd backend && .\venv\Scripts\activate && python run.py"
+start "EpiNexus Backend" cmd /k "cd backend && ..\.venv\Scripts\activate && python run.py"
 
 :: Start Frontend
 echo Starting Frontend...
