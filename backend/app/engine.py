@@ -70,7 +70,8 @@ class SpatialExposureEngine:
         local_viral_loads = np.zeros(len(self.loc_ids))
         
         dt = (self.timestamps[1] - self.timestamps[0]).total_seconds() if len(self.timestamps) > 1 else 300
-        effective_alpha = (self.pathogen['alpha'] * alpha_noise) / 50.0 
+        # Scale alpha significantly down for multi-day accumulation
+        effective_alpha = (self.pathogen['alpha'] * alpha_noise) / 400.0 
         
         # Decay constants
         lambda_bio = math.log(2) / self.pathogen['half_life_sec']
@@ -89,7 +90,8 @@ class SpatialExposureEngine:
                 p0_loc_indices = data['loc_indices'][p0_mask]
                 for l_idx in p0_loc_indices:
                     if l_idx != -1:
-                        shedding[l_idx] = 0.1
+                        # Reduced shedding rate
+                        shedding[l_idx] = 0.02
             
             local_viral_loads = (local_viral_loads * decay_factors) + shedding
             self.viral_loads_max = np.maximum(self.viral_loads_max, local_viral_loads)
@@ -104,7 +106,8 @@ class SpatialExposureEngine:
             
             if len(p0_indices) > 0:
                 p0_coords = coords[p0_indices]
-                neighbors_list = tree.query_ball_point(p0_coords, 0.0002)
+                # Smaller radius (approx 3-5 meters)
+                neighbors_list = tree.query_ball_point(p0_coords, 0.00005)
                 
                 for i, neighbors in enumerate(neighbors_list):
                     idx_p0 = p0_indices[i]
@@ -114,9 +117,12 @@ class SpatialExposureEngine:
                         if n_idx == idx_p0: continue
                         if data['is_p0'][n_idx]: continue
                         
+                        # Use squared distance with a more aggressive decay
                         dist_sq = np.sum((coords[idx_p0] - coords[n_idx])**2)
                         target_id = data['agent_ids'][n_idx]
-                        intensity = (1.0 / (dist_sq + 0.5)) * dt * effective_alpha
+                        
+                        # Intensity falls off much faster now
+                        intensity = (1.0 / (dist_sq * 1000000 + 1.0)) * dt * effective_alpha
                         
                         dosages[self.agent_id_to_idx[target_id]] += intensity
                         if intensity > 0.05:
@@ -131,6 +137,7 @@ class SpatialExposureEngine:
                 not_p0_and_valid = valid_mask & (~p0_mask)
                 if not_p0_and_valid.any():
                     target_loc_indices = v_loc_indices[not_p0_and_valid]
+                    # Exposure from environmental viral load
                     exposure_inc = local_viral_loads[target_loc_indices] * env_factors[target_loc_indices] * dt * effective_alpha
                     
                     target_agent_ids = data['agent_ids'][not_p0_and_valid]
@@ -371,8 +378,9 @@ class SpatialExposureEngine:
                 
         # 5. Risk Distribution
         buckets = [0] * 10
-        for s in summary:
-            idx = min(9, int(s['mean_risk'] * 10))
+        for agent_data in agents:
+            # Use the calculated meanRisk which correctly handles Patient Zero
+            idx = min(9, int(agent_data['meanRisk'] * 10))
             buckets[idx] += 1
             
         risk_dist = []
