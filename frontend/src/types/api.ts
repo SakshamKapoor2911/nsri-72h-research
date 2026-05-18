@@ -81,6 +81,8 @@ export interface SimulationKpis {
 export interface RiskBucket {
   bracket: string; // e.g. "0-10%"
   agents: number;
+  baseline?: number; // Heuristic-based (6ft/15min rule) distribution
+  predictive?: number; // Monte Carlo simulation results
 }
 
 export interface SimulationData {

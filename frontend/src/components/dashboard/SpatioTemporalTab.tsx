@@ -42,6 +42,8 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
   const [showPoints, setShowPoints] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState<SpatialPoint | null>(null);
   const [hoveredArc, setHoveredArc] = useState<SpatialArc | null>(null);
+  const [riskFilter, setRiskFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "infected" | "exposed" | "susceptible">("all");
 
   useEffect(() => {
     if (isPlaying) {
@@ -74,12 +76,21 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
   
   // Filter spatial points within ±0.25 days of current tick for smooth animation
   // Ensure we only show one point per agent at any given time tick
+  // Apply risk and status filters
   const visiblePoints = useMemo(() => {
     if (!points) return [];
-    const timeWindow = 0.25; // Show points within this range of current tick
-    const filtered = points.filter(p => Math.abs(p.tick - tick) <= timeWindow);
+    const timeWindow = 0.25;
+    let filtered = points.filter(p => Math.abs(p.tick - tick) <= timeWindow);
     
-    // Deduplicate: Map by label (agent name/id) to keep only the closest in time
+    // Apply risk filter
+    if (riskFilter === "high") filtered = filtered.filter(p => p.risk > 0.5);
+    else if (riskFilter === "medium") filtered = filtered.filter(p => p.risk > 0.15 && p.risk <= 0.5);
+    else if (riskFilter === "low") filtered = filtered.filter(p => p.risk <= 0.15);
+    
+    // Apply status filter
+    if (statusFilter !== "all") filtered = filtered.filter(p => p.status === statusFilter);
+    
+    // Deduplicate: Map by label to keep only the closest in time
     const map = new Map<string, SpatialPoint>();
     for (const p of filtered) {
         const existing = map.get(p.label);
@@ -88,7 +99,7 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
         }
     }
     return Array.from(map.values());
-  }, [points, tick]);
+  }, [points, tick, riskFilter, statusFilter]);
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -243,23 +254,77 @@ export function SpatioTemporalTab({ startDay, endDay, arcs, points }: Props) {
         <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground backdrop-blur">
           <Globe2 className="h-3 w-3 text-primary" /> 800+ Spatial Points · Risk Heatmap
         </div>
-        <div className="pointer-events-auto absolute right-3 top-3 flex items-center gap-2">
-          <button
-            onClick={() => setShowPoints(!showPoints)}
-            className="rounded-sm bg-background/50 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground hover:text-primary hover:bg-primary/10 backdrop-blur transition-colors"
-            title={showPoints ? "Hide spatial points" : "Show spatial points"}
-          >
-            <Zap className="h-3 w-3 inline mr-1" />
-            {showPoints ? "Hide" : "Show"} Points
-          </button>
-          <div className="rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] tabular-nums text-primary backdrop-blur">
-            {visiblePoints.length} visible · day {tick.toFixed(2)}
+        <div className="pointer-events-auto absolute right-3 top-3 flex flex-col gap-2">
+          {/* Risk Filter */}
+          <div className="flex items-center gap-1 rounded-sm bg-background/50 backdrop-blur p-1">
+            <span className="px-1.5 text-[9px] font-semibold uppercase text-muted-foreground">Risk:</span>
+            {(["all", "high", "medium", "low"] as const).map((level) => (
+              <button
+                key={level}
+                onClick={() => setRiskFilter(level)}
+                className={`px-2 py-0.5 text-[10px] uppercase font-mono tracking-wide rounded transition-colors ${
+                  riskFilter === level
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background/40 text-muted-foreground hover:bg-primary/20"
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          {/* Status Filter */}
+          <div className="flex items-center gap-1 rounded-sm bg-background/50 backdrop-blur p-1">
+            <span className="px-1.5 text-[9px] font-semibold uppercase text-muted-foreground">Status:</span>
+            {(["all", "infected", "exposed", "susceptible"] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-2 py-0.5 text-[10px] uppercase font-mono tracking-wide rounded transition-colors ${
+                  statusFilter === status
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background/40 text-muted-foreground hover:bg-primary/20"
+                }`}
+              >
+                {status.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+          {/* Show/Hide and Counter */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowPoints(!showPoints)}
+              className="rounded-sm bg-background/50 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground hover:text-primary hover:bg-primary/10 backdrop-blur transition-colors"
+              title={showPoints ? "Hide spatial points" : "Show spatial points"}
+            >
+              <Zap className="h-3 w-3 inline mr-1" />
+              {showPoints ? "Hide" : "Show"} Points
+            </button>
+            <div className="rounded-sm bg-background/50 px-2 py-1 font-mono text-[10px] tabular-nums text-primary backdrop-blur">
+              {visiblePoints.length} visible · day {tick.toFixed(2)}
+            </div>
           </div>
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
           <ArcLegend totalPoints={visiblePoints.length} activeCases={Math.floor(tick * 5)} />
           <span>origin: Cruise Terminal A · 36.7°N / -76.0°W</span>
         </div>
+
+        {/* Hovered Point Detail Card */}
+        {hoveredPoint && (
+          <div className="pointer-events-none absolute bottom-16 left-3 rounded-md bg-background/95 backdrop-blur border border-primary/20 p-3 max-w-[250px]">
+            <div className="space-y-2 font-mono text-[10px]">
+              <div className="font-semibold text-primary">{hoveredPoint.label}</div>
+              <div className="grid grid-cols-2 gap-1 text-muted-foreground">
+                <div>Risk:</div>
+                <div className="font-semibold" style={{color: riskColor(hoveredPoint.risk)}}>{(hoveredPoint.risk * 100).toFixed(1)}%</div>
+                <div>Status:</div>
+                <div className="capitalize font-semibold">{hoveredPoint.status}</div>
+                <div>Location:</div>
+                <div className="capitalize">{hoveredPoint.locationId.replace('loc_', '')}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border bg-[var(--color-panel)]/60 px-4 py-3">
